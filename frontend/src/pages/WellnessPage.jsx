@@ -1,8 +1,31 @@
 import { useState } from 'react';
-import { Check, Flower2, ShieldCheck, Timer, Wind } from 'lucide-react';
+import {
+  Check,
+  Clock3,
+  Flower2,
+  Headphones,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+  Timer,
+  Wind,
+} from 'lucide-react';
 import { PageHeader } from '../components/Ui';
 import WellnessPlayer from '../components/WellnessPlayer';
 import { BREATHING_EXERCISES, MEDITATION_SESSIONS, meditationDuration } from '../lib/wellness';
+
+const PRACTICE_TYPES = [
+  {
+    id: 'breathing',
+    shortLabel: 'Breathing',
+    Icon: Wind,
+  },
+  {
+    id: 'meditation',
+    shortLabel: 'Meditation',
+    Icon: Flower2,
+  },
+];
 
 export default function WellnessPage({ onNavigate, preferences }) {
   const [kind, setKind] = useState('breathing');
@@ -13,70 +36,135 @@ export default function WellnessPage({ onNavigate, preferences }) {
   const practices = breathing ? BREATHING_EXERCISES : MEDITATION_SESSIONS;
   const selectedId = breathing ? breathingId : meditationId;
   const practice = practices.find((item) => item.id === selectedId);
-  const durationMs = (breathing ? minutes * 60 : meditationDuration(practice)) * 1000;
+  const durationSeconds = breathing ? minutes * 60 : meditationDuration(practice);
+  const durationMs = durationSeconds * 1000;
+  const selectedType = PRACTICE_TYPES.find((item) => item.id === kind);
+  const selectPractice = (id) => breathing ? setBreathingId(id) : setMeditationId(id);
 
   return (
     <div className="page-enter app-page wellness-page">
       <PageHeader
-        eyebrow="Wellness tools"
-        title="A softer moment starts here."
-        description="Step away from the numbers. Follow a gentle breath or make a little room for the present, at your own pace."
-        action={<span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-pine-950/15 px-4 py-3 text-sm font-bold text-pine-50"><Timer size={17} /> 1-8 minutes for you</span>}
+        eyebrow="Wellness studio"
+        title="Take a pause that meets you where you are."
+        description="Choose a short, gentle practice and follow it at your own pace. Nothing here needs to be done perfectly."
+        action={<span className="page-header-badge"><Timer size={17} /> {durationSeconds / 60} min selected</span>}
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2" role="group" aria-label="Wellness practice type">
-        {[
-          { id: 'breathing', label: 'Guided breathing', description: 'An easy rhythm, one breath at a time.', Icon: Wind },
-          { id: 'meditation', label: 'Guided meditation', description: 'Notice, pause, and gently begin again.', Icon: Flower2 },
-        ].map(({ id, label, description, Icon }) => (
-          <button key={id} type="button" onClick={() => setKind(id)} aria-pressed={kind === id} className={`wellness-choice flex items-center gap-4 border p-5 text-left transition hover:-translate-y-0.5 ${kind === id ? 'border-pine-600 bg-pine-900 text-white shadow-lg shadow-pine-900/10' : 'border-pine-200 bg-white/80 text-pine-900 hover:bg-pine-50'}`}>
-            <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${kind === id ? 'bg-white/10 text-pine-100' : 'bg-pine-100 text-pine-700'}`}><Icon size={23} /></span>
-            <span className="flex-1"><span className="block font-semibold">{label}</span><span className={`mt-1 block text-xs leading-5 ${kind === id ? 'text-pine-100' : 'text-slate-600'}`}>{description}</span></span>
-            {kind === id && <Check size={18} className="shrink-0 text-pine-200" />}
-          </button>
-        ))}
+      <section className="wellness-start-card" aria-labelledby="wellness-start-title">
+        <div className="wellness-start-copy">
+          <span className="wellness-start-icon" aria-hidden="true"><Sparkles size={20} /></span>
+          <div>
+            <p className="eyebrow">Start with what feels manageable</p>
+            <h2 id="wellness-start-title">What kind of pause would help right now?</h2>
+          </div>
+        </div>
+        <div className="wellness-mode-switch" role="group" aria-label="Wellness practice type">
+          {PRACTICE_TYPES.map(({ id, shortLabel, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setKind(id)}
+              aria-pressed={kind === id}
+              className="wellness-mode-button"
+            >
+              <Icon size={17} aria-hidden="true" />
+              {shortLabel}
+              {kind === id && <Check size={15} className="wellness-mode-check" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="wellness-trust-strip" aria-label="Session information">
+        <span><LockKeyhole size={16} aria-hidden="true" /><strong>Private by default</strong><small>Session progress is not stored</small></span>
+        <span><Headphones size={16} aria-hidden="true" /><strong>Voice is optional</strong><small>Prompts can stay on screen</small></span>
+        <span><ShieldCheck size={16} aria-hidden="true" /><strong>You stay in control</strong><small>Pause or stop at any time</small></span>
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.4fr)]">
-        <aside className="card p-5 sm:p-6">
-          <p className="eyebrow">Make it your moment</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-pine-950">{breathing ? 'Choose your rhythm' : 'Choose a session'}</h2>
-          <div className="mt-5 space-y-3" role="group" aria-label={breathing ? 'Breathing exercise' : 'Meditation session'}>
-            {practices.map((item) => (
-              <button key={item.id} type="button" aria-pressed={item.id === selectedId} onClick={() => breathing ? setBreathingId(item.id) : setMeditationId(item.id)} className={`w-full rounded-2xl border p-4 text-left transition ${item.id === selectedId ? 'border-pine-500 bg-pine-50 shadow-sm' : 'border-pine-100 bg-white/70 hover:border-pine-300'}`}>
-                <span className="flex items-center justify-between gap-3"><span className="text-sm font-semibold text-pine-950">{item.title}</span>{item.id === selectedId && <Check size={16} className="shrink-0 text-pine-700" />}</span>
-                <span className="mt-1.5 block text-xs leading-5 text-slate-600">{item.description}</span>
-                <span className="mt-3 inline-flex rounded-lg bg-white px-2 py-1 text-xs font-bold text-pine-800">
-                  {breathing ? `${item.phases[0].seconds}s in / ${item.phases[1].seconds}s out / no holds` : `${meditationDuration(item) / 60} min / ${item.tag}`}
-                </span>
-              </button>
-            ))}
+      <div className="wellness-workspace">
+        <aside className="card wellness-library" aria-labelledby="wellness-library-title">
+          <div className="wellness-library-heading">
+            <span className="wellness-library-icon" aria-hidden="true"><selectedType.Icon size={20} /></span>
+            <div>
+              <p className="eyebrow">Your session</p>
+              <h2 id="wellness-library-title">Choose {breathing ? 'a breathing rhythm' : 'a guided practice'}</h2>
+            </div>
+          </div>
+
+          <div className="wellness-practice-list" role="group" aria-label={breathing ? 'Breathing exercise' : 'Meditation session'}>
+            {practices.map((item) => {
+              const selected = item.id === selectedId;
+              const itemDuration = breathing ? `${item.phases[0].seconds}s in · ${item.phases[1].seconds}s out` : `${meditationDuration(item) / 60} min`;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => selectPractice(item.id)}
+                  className="wellness-practice-card"
+                >
+                  <span className="wellness-practice-marker" aria-hidden="true">{selected ? <Check size={15} /> : null}</span>
+                  <span className="wellness-practice-copy">
+                    <span className="wellness-practice-title">{item.title}</span>
+                    <span className="wellness-practice-description">{item.description}</span>
+                    <span className="wellness-practice-meta"><Clock3 size={12} aria-hidden="true" /> {itemDuration}{!breathing && ` · ${item.tag}`}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {breathing && (
-            <fieldset className="mt-6">
-              <legend className="text-sm font-semibold text-pine-900">How much time do you have?</legend>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+            <fieldset className="wellness-duration-fieldset">
+              <legend>Choose a comfortable length</legend>
+              <div className="wellness-duration-options">
                 {[1, 3, 5].map((value) => (
-                  <button key={value} type="button" onClick={() => setMinutes(value)} aria-pressed={minutes === value} className={`min-h-11 rounded-xl border text-sm font-bold transition ${minutes === value ? 'border-pine-700 bg-pine-700 text-white' : 'border-pine-200 bg-white text-pine-800 hover:bg-pine-50'}`}>{value} min</button>
+                  <button key={value} type="button" onClick={() => setMinutes(value)} aria-pressed={minutes === value}>
+                    <strong>{value}</strong><span>min</span>
+                  </button>
                 ))}
               </div>
             </fieldset>
           )}
-          <p className="mt-5 text-xs leading-6 text-slate-500">Changing the practice or duration resets your timer. Session progress is not saved.</p>
-          <div className="mt-5 rounded-2xl border border-pine-100 bg-white/75 p-4">
-            <p className="flex items-center gap-2 text-xs font-semibold text-pine-800"><ShieldCheck size={16} /> Your comfort comes first</p>
-            <p className="mt-2 text-xs leading-6 text-slate-600">Practise somewhere safe, never while driving. Keep your eyes open if you prefer. If you feel dizzy, breathless, or more distressed, stop and breathe normally.</p>
+
+          <div className="wellness-selected-summary" aria-label="Selected session summary">
+            <div>
+              <span>Selected practice</span>
+              <strong>{practice.title}</strong>
+            </div>
+            <span className="wellness-selected-duration"><Timer size={14} aria-hidden="true" /> {durationSeconds / 60} min</span>
+          </div>
+
+          <div className="wellness-comfort-note">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <div>
+              <p>Your comfort comes first</p>
+              <span>Keep your eyes open if you prefer. If you feel dizzy, breathless, or more distressed, stop and breathe normally.</span>
+            </div>
           </div>
         </aside>
 
-        <WellnessPlayer key={`${kind}-${practice.id}-${durationMs}`} kind={kind} practice={practice} durationMs={durationMs} compactMotion={preferences?.compactMotion} onNavigate={onNavigate} />
+        <WellnessPlayer
+          key={`${kind}-${practice.id}-${durationMs}`}
+          kind={kind}
+          practice={practice}
+          durationMs={durationMs}
+          compactMotion={preferences?.compactMotion}
+          onNavigate={onNavigate}
+        />
       </div>
 
-      <footer className="signed-surface mt-6 rounded-2xl border border-pine-100 px-5 py-5 text-xs leading-6 text-slate-600 sm:px-7">
-        <p className="font-bold text-pine-900">A small practice, not a prescription.</p>
-        <p>These general wellbeing tools do not diagnose or treat a condition, and are not a replacement for professional care. They may not suit everyone; stopping is always okay.</p>
-        <p className="mt-2">Learn more: <a className="font-semibold text-pine-800 underline underline-offset-4" href="https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/" target="_blank" rel="noreferrer">NHS breathing guidance (opens in a new tab)</a> · <a className="font-semibold text-pine-800 underline underline-offset-4" href="https://www.nhs.uk/mental-health/self-help/tips-and-support/mindfulness/" target="_blank" rel="noreferrer">NHS mindfulness guidance (opens in a new tab)</a></p>
+      <footer className="wellness-disclaimer">
+        <div>
+          <p className="eyebrow">Use with care</p>
+          <h2>A small practice, not a prescription.</h2>
+          <p>These general wellbeing tools do not diagnose or treat a condition and are not a replacement for professional care. Practise somewhere safe, never while driving, and remember that stopping is always okay.</p>
+        </div>
+        <div className="wellness-sources">
+          <p>Evidence-informed reading</p>
+          <a href="https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/" target="_blank" rel="noreferrer">NHS breathing guidance <span aria-hidden="true">↗</span></a>
+          <a href="https://www.nhs.uk/mental-health/self-help/tips-and-support/mindfulness/" target="_blank" rel="noreferrer">NHS mindfulness guidance <span aria-hidden="true">↗</span></a>
+        </div>
       </footer>
     </div>
   );

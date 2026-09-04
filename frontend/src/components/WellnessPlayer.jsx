@@ -10,102 +10,114 @@ export default function WellnessPlayer({ kind, practice, durationMs, compactMoti
   const running = session.status === 'running';
   const completed = session.status === 'completed';
   const idle = session.status === 'idle';
-  const progress = session.elapsedMs / durationMs * 100;
+  const progress = Math.min(100, session.elapsedMs / durationMs * 100);
   const Icon = breathing ? Wind : Flower2;
+  const statusLabel = completed ? 'Complete' : running ? 'In progress' : idle ? 'Ready to begin' : 'Paused';
 
   return (
-    <section className={`card overflow-hidden ${compactMotion ? 'wellness-reduced-motion' : ''}`} aria-label={`${breathing ? 'Breathing' : 'Meditation'} session player`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pine-100 p-5 sm:px-7">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-pine-100 text-pine-800"><Icon size={20} /></span>
+    <section className={`card wellness-player overflow-hidden ${compactMotion ? 'wellness-reduced-motion' : ''}`} aria-label={`${breathing ? 'Breathing' : 'Meditation'} session player`}>
+      <div className="wellness-player-header">
+        <div className="wellness-player-identity">
+          <span className="wellness-player-icon"><Icon size={20} aria-hidden="true" /></span>
           <div>
-            <h2 className="font-semibold text-pine-950">{practice.title}</h2>
-            <p className="mt-1 text-xs font-medium text-pine-700">{completed ? 'Complete' : running ? 'In progress' : idle ? 'Ready when you are' : 'Paused - take your time'}</p>
+            <p className="wellness-player-kicker">{breathing ? 'Breathing practice' : 'Guided meditation'}</p>
+            <h2>{practice.title}</h2>
           </div>
         </div>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-pine-200 bg-white px-3 py-2 text-xs font-bold text-pine-800 transition hover:bg-pine-50 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!voice.available}
-          aria-pressed={voice.enabled}
-          aria-label="Spoken guidance"
-          onClick={voice.toggle}
-          title={voice.available ? 'Read prompts using an English voice on this device' : 'No local English voice is available; follow the written guidance'}
-        >
-          {voice.enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          Voice {voice.enabled ? 'on' : 'off'}
-        </button>
+        <div className="wellness-player-actions">
+          <span className="wellness-status-pill" data-status={session.status}><span aria-hidden="true" />{statusLabel}</span>
+          <button
+            type="button"
+            className="wellness-voice-button"
+            disabled={!voice.available}
+            aria-pressed={voice.enabled}
+            aria-label="Spoken guidance"
+            onClick={voice.toggle}
+            title={voice.available ? 'Read prompts using an English voice on this device' : 'No local English voice is available; follow the written guidance'}
+          >
+            {voice.enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            Voice {voice.enabled ? 'on' : 'off'}
+          </button>
+        </div>
       </div>
 
       {completed ? (
-        <div className="flex min-h-[23rem] flex-col items-center justify-center px-6 py-10 text-center">
-          <span className="grid h-20 w-20 place-items-center rounded-full bg-pine-100 text-pine-700"><Check size={34} /></span>
+        <div className="wellness-complete-state">
+          <span className="wellness-complete-icon"><Check size={34} aria-hidden="true" /></span>
           <div role="status">
-            <h3 className="mt-6 text-3xl font-semibold tracking-tight text-pine-950">A moment, just for you.</h3>
-            <p className="mt-3 text-sm leading-7 text-slate-600">Session complete. Return to your natural rhythm and take your time.</p>
+            <p className="eyebrow">Practice complete</p>
+            <h3>A moment, just for you.</h3>
+            <p>Return to your natural rhythm. Notice how you feel without needing to change anything.</p>
           </div>
-          <button type="button" className="secondary-button mt-5" onClick={() => onNavigate('mood')}>Reflect in your journal</button>
+          <button type="button" className="primary-button" onClick={() => onNavigate('mood')}>Reflect in your journal</button>
         </div>
       ) : breathing ? (
-        <div className="wellness-stage relative flex min-h-[23rem] flex-col items-center justify-center overflow-hidden px-5 py-7 text-center">
-          <div className="relative grid h-60 w-60 place-items-center sm:h-64 sm:w-64">
-            <span className="absolute inset-0 rounded-full border border-pine-300/35" aria-hidden="true" />
-            <span className="absolute inset-3 rounded-full border border-pine-300/30" aria-hidden="true" />
-            <span className="wellness-orb absolute inset-5 rounded-full" style={{ transform: `scale(${idle ? 0.76 : frame.scale})` }} aria-hidden="true" />
-            <div className="relative max-w-[10rem] text-white">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-pine-100">{idle ? 'Your moment' : running ? 'Follow gently' : 'Paused'}</p>
-              <p className="mt-2 text-2xl font-semibold" aria-live={voice.enabled ? 'off' : 'polite'} aria-atomic="true">{idle ? 'Let yourself settle' : frame.label}</p>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-pine-100" aria-hidden="true">{idle ? 'No breath holds' : `${Math.ceil(frame.remainingMs / 1000)}s`}</p>
+        <div className="wellness-stage wellness-breathing-stage">
+          <div className="wellness-stage-meta"><span>Comfortable pace</span><span>No breath holds</span></div>
+          <div className="wellness-orb-wrap">
+            <span className="wellness-orb-ring wellness-orb-ring-outer" aria-hidden="true" />
+            <span className="wellness-orb-ring wellness-orb-ring-inner" aria-hidden="true" />
+            <span className="wellness-orb" style={{ transform: `scale(${idle ? 0.76 : frame.scale})` }} aria-hidden="true" />
+            <div className="wellness-orb-content">
+              <p>{idle ? 'Your moment' : running ? 'Follow gently' : 'Paused'}</p>
+              <h3 aria-live={voice.enabled ? 'off' : 'polite'} aria-atomic="true">{idle ? 'Let yourself settle' : frame.label}</h3>
+              <span aria-hidden="true">{idle ? 'Begin when ready' : `${Math.ceil(frame.remainingMs / 1000)} seconds`}</span>
             </div>
           </div>
-          <p className="mt-5 max-w-md text-sm leading-6 text-pine-900">{idle ? 'Sit comfortably with your feet supported. Let the count guide you, never force you.' : frame.instruction}</p>
+          <p className="wellness-stage-instruction">{idle ? 'Sit comfortably with your feet supported. Let the count guide you, never force you.' : frame.instruction}</p>
         </div>
       ) : (
-        <div className="wellness-stage flex min-h-[23rem] flex-col items-center justify-center px-6 py-9 text-center sm:px-12">
-          <span className="grid h-16 w-16 place-items-center rounded-[1.6rem] bg-pine-800 text-pine-100 shadow-lg shadow-pine-200/50"><Flower2 size={29} strokeWidth={1.5} /></span>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.17em] text-pine-700">{idle ? 'A guided practice' : `Step ${frame.index + 1} of ${practice.steps.length}`}</p>
-          <div aria-live={voice.enabled ? 'off' : 'polite'} aria-atomic="true">
-            <h3 className="mt-3 text-3xl font-semibold tracking-tight text-pine-950">{frame.title}</h3>
-            <p className="mx-auto mt-4 max-w-lg text-lg leading-8 text-pine-900">{frame.text}</p>
+        <div className="wellness-stage wellness-meditation-stage">
+          <div className="wellness-step-track" aria-label={`Step ${idle ? 1 : frame.index + 1} of ${practice.steps.length}`}>
+            {practice.steps.map((step, index) => (
+              <span key={step.title} className={index <= (idle ? 0 : frame.index) ? 'is-current' : ''} aria-hidden="true" />
+            ))}
           </div>
-          <p className="mt-5 text-xs leading-6 text-pine-700">{idle ? 'Start when you are ready. Written prompts will guide each step.' : 'Quiet between prompts is intentional. Nothing to get right.'}</p>
+          <span className="wellness-meditation-icon"><Flower2 size={29} strokeWidth={1.5} aria-hidden="true" /></span>
+          <p className="wellness-step-label">{idle ? 'A guided practice' : `Step ${frame.index + 1} of ${practice.steps.length}`}</p>
+          <div aria-live={voice.enabled ? 'off' : 'polite'} aria-atomic="true">
+            <h3>{frame.title}</h3>
+            <p className="wellness-meditation-copy">{frame.text}</p>
+          </div>
+          <p className="wellness-stage-note">{idle ? 'Start when you are ready. Written prompts will guide each step.' : 'Quiet between prompts is intentional. Nothing to get right.'}</p>
         </div>
       )}
 
-      <div className="border-t border-pine-100 p-5 sm:p-7">
-        <div className="flex items-center justify-between gap-4 text-xs font-semibold text-pine-700">
-          <p>{completed ? 'You finished your practice' : `${formatSessionTime(session.elapsedMs, 'down')} elapsed`}</p>
+      <div className="wellness-controls">
+        <div className="wellness-progress-copy">
+          <div><strong>{completed ? 'Practice complete' : running ? 'Stay with this moment' : idle ? 'Ready when you are' : 'Take all the time you need'}</strong><span>{Math.round(progress)}% complete</span></div>
           <p className="tabular-nums"><span role="timer" aria-live="off" aria-label="Time remaining">{formatSessionTime(session.remainingMs)}</span> remaining</p>
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-pine-100" role="progressbar" aria-label="Session progress" aria-valuemin={0} aria-valuemax={durationMs / 1000} aria-valuenow={Math.floor(session.elapsedMs / 1000)} aria-valuetext={`${formatSessionTime(session.elapsedMs, 'down')} of ${formatSessionTime(durationMs)}`}>
-          <div className="h-full rounded-full bg-pine-600 transition-[width] duration-100" style={{ width: `${progress}%` }} />
+        <div className="wellness-progress-track" role="progressbar" aria-label="Session progress" aria-valuemin={0} aria-valuemax={durationMs / 1000} aria-valuenow={Math.floor(session.elapsedMs / 1000)} aria-valuetext={`${formatSessionTime(session.elapsedMs, 'down')} of ${formatSessionTime(durationMs)}`}>
+          <div style={{ width: `${progress}%` }} />
         </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <div className="wellness-control-buttons">
           {!completed && (
-            <button type="button" onClick={running ? session.pause : session.start} className="primary-button min-w-40 rounded-full">
+            <button type="button" onClick={running ? session.pause : session.start} className="primary-button">
               {running ? <Pause size={17} /> : <Play size={17} />}
               {running ? 'Pause session' : idle ? 'Start session' : 'Resume session'}
             </button>
           )}
-          <button type="button" onClick={session.reset} className="secondary-button rounded-full" disabled={idle}>
+          <button type="button" onClick={session.reset} className="secondary-button" disabled={idle}>
             <RotateCcw size={16} /> {completed ? 'Practise again' : 'Reset session'}
           </button>
         </div>
         {voice.error && <p className="mt-4 text-sm text-amber-800" role="status">{voice.error}</p>}
-        <p className="mt-4 text-center text-xs leading-6 text-slate-500">
+        <p className="wellness-session-note">
           {voice.available ? 'Optional spoken prompts use a voice on this device.' : 'Written guidance is available. This browser has no local English voice.'}
-          <br />Switching browser tabs pauses the timer. Leaving this page ends the practice.
+          <span>Switching tabs pauses the timer. Leaving this page ends the practice.</span>
         </p>
       </div>
 
       {!breathing && (
-        <details className="border-t border-pine-100 px-5 py-5 sm:px-7">
-          <summary className="cursor-pointer rounded-lg text-sm font-semibold text-pine-800">Read the full session guide</summary>
-          <ol className="mt-5 space-y-4">
+        <details className="wellness-full-guide">
+          <summary>Preview the full session guide <span>{practice.steps.length} steps</span></summary>
+          <ol>
             {practice.steps.map((step, index) => (
-              <li key={step.title} className={`rounded-2xl border p-4 ${index === frame.index && !completed ? 'border-pine-300 bg-pine-50' : 'border-pine-100 bg-white/65'}`} aria-current={!completed && index === frame.index ? 'step' : undefined}>
-                <div className="flex justify-between gap-4 text-sm font-bold text-pine-900"><h3>{index + 1}. {step.title}</h3><span className="shrink-0 text-xs text-pine-700">{step.seconds}s</span></div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{step.text}</p>
+              <li key={step.title} className={index === frame.index && !completed ? 'is-current' : ''} aria-current={!completed && index === frame.index ? 'step' : undefined}>
+                <span className="wellness-guide-number">{index + 1}</span>
+                <div><h3>{step.title}</h3><p>{step.text}</p></div>
+                <span className="wellness-guide-time">{step.seconds}s</span>
               </li>
             ))}
           </ol>
