@@ -6,6 +6,7 @@ const SleepLog = require('../models/SleepLog');
 const SymptomLog = require('../models/SymptomLog');
 const Tag = require('../models/Tag');
 const ThoughtRecord = require('../models/ThoughtRecord');
+const CommunityPost = require('../models/CommunityPost');
 
 const WELLBEING_GOALS = ['mood', 'stress', 'sleep', 'routine', 'medication'];
 const DEFAULT_PREFERENCES = Object.freeze({
@@ -22,13 +23,61 @@ const publicPreferences = (preferences = {}) => ({
   ...(typeof preferences.toObject === 'function' ? preferences.toObject() : preferences),
 });
 
+const therapistProfileObject = (profile = {}) => (
+  typeof profile.toObject === 'function' ? profile.toObject() : profile
+);
+
+const publicTherapistProfile = (user) => {
+  if (user.role !== 'therapist') return null;
+  const profile = therapistProfileObject(user.therapistProfile);
+  return {
+    specialization: profile.specialization || '',
+    workplace: profile.workplace || '',
+    registrationAuthority: profile.registrationAuthority || '',
+    registrationNumber: profile.registrationNumber || '',
+    verificationStatus: profile.verificationStatus || 'pending',
+    verifiedAt: profile.verifiedAt || null,
+  };
+};
+
 const publicUser = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
   profileImage: user.profileImage || '',
+  role: user.role || 'member',
+  therapistProfile: publicTherapistProfile(user),
   preferences: publicPreferences(user.preferences),
 });
+
+const validateTherapistRegistration = (input = {}) => {
+  const role = input.role || 'member';
+  if (!['member', 'therapist'].includes(role)) return { error: 'Choose a valid account type' };
+  if (role === 'member') return { value: { role, therapistProfile: {} } };
+
+  const profile = input.therapistProfile || {};
+  const specialization = profile.specialization?.trim();
+  // Keep accepting optional legacy registration details without requiring them at signup.
+  const registrationAuthority = profile.registrationAuthority?.trim() || '';
+  const registrationNumber = profile.registrationNumber?.trim() || '';
+  const workplace = profile.workplace?.trim() || '';
+  if (!specialization) {
+    return { error: 'Professional accounts require a specialization' };
+  }
+  return {
+    value: {
+      role,
+      therapistProfile: {
+        specialization: specialization.slice(0, 120),
+        registrationAuthority: registrationAuthority.slice(0, 120),
+        registrationNumber: registrationNumber.slice(0, 80),
+        workplace: workplace.slice(0, 160),
+        verificationStatus: 'pending',
+        verifiedAt: null,
+      },
+    },
+  };
+};
 
 const validateProfileImage = (value) => {
   if (value === null || value === '') return { value: '' };
@@ -64,7 +113,7 @@ const validatePreferences = (input = {}, current = {}) => {
 };
 
 const loadAccountRecords = async (userId) => {
-  const [moods, symptoms, sleep, medications, medicationDoses, tags, thoughtRecords, reportShares] = await Promise.all([
+  const [moods, symptoms, sleep, medications, medicationDoses, tags, thoughtRecords, reportShares, communityPosts, therapistResponses] = await Promise.all([
     MoodEntry.find({ user: userId }).sort({ createdAt: 1 }).lean(),
     SymptomLog.find({ user: userId }).sort({ createdAt: 1 }).lean(),
     SleepLog.find({ user: userId }).sort({ createdAt: 1 }).lean(),
@@ -73,8 +122,10 @@ const loadAccountRecords = async (userId) => {
     Tag.find({ user: userId }).sort({ _id: 1 }).lean(),
     ThoughtRecord.find({ user: userId }).sort({ createdAt: 1 }).lean(),
     ReportShare.find({ user: userId }).select('-tokenHash').sort({ createdAt: 1 }).lean(),
+    CommunityPost.find({ author: userId }).select('-reports').sort({ createdAt: 1 }).lean(),
+    CommunityPost.find({ 'therapistResponse.therapist': userId }).select('title anonymousAlias therapistResponse createdAt').sort({ createdAt: 1 }).lean(),
   ]);
-  return { moods, symptoms, sleep, medications, medicationDoses, tags, thoughtRecords, reportShares };
+  return { moods, symptoms, sleep, medications, medicationDoses, tags, thoughtRecords, reportShares, communityPosts, therapistResponses };
 };
 
 const buildAccountExport = async (user) => ({
@@ -84,6 +135,8 @@ const buildAccountExport = async (user) => ({
     name: user.name,
     email: user.email,
     profileImage: user.profileImage || '',
+    role: user.role || 'member',
+    therapistProfile: publicTherapistProfile(user),
     preferences: publicPreferences(user.preferences),
     createdAt: user.createdAt,
   },
@@ -99,6 +152,9 @@ const deleteAccountRecords = async (userId) => Promise.all([
   Tag.deleteMany({ user: userId }),
   ThoughtRecord.deleteMany({ user: userId }),
   ReportShare.deleteMany({ user: userId }),
+  CommunityPost.deleteMany({ author: userId }),
+  CommunityPost.updateMany({ 'therapistResponse.therapist': userId }, { $set: { therapistResponse: null } }),
+  CommunityPost.updateMany({}, { $pull: { reports: { reporter: userId } } }),
 ]);
 
 module.exports = {
@@ -106,7 +162,9 @@ module.exports = {
   buildAccountExport,
   deleteAccountRecords,
   publicPreferences,
+  publicTherapistProfile,
   publicUser,
+  validateTherapistRegistration,
   validatePreferences,
   validateProfileImage,
 };
